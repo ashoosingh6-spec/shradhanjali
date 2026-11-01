@@ -12,3 +12,4 @@
 - Admin can upload the portrait directly (stored in Supabase Storage bucket `portraits`); the original portrait is the default.
 - Save now verifies that a row was really updated and explains the RLS/admin_user_id problem instead of failing silently.
 - New `supabase-fix.sql` for existing projects.
+- Fonts bundled from npm (@fontsource): Noto Serif Devanagari 700/800 (title, name), Noto Sans Devanagari 400/500 (message, family details), Mukta 600 (schedule, ribbons). No font files needed.

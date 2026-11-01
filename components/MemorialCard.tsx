@@ -4,28 +4,29 @@ import type { CardContent } from "@/lib/card-types";
 // All positions are in poster pixels (1024 x 1536) and converted to % so the card scales.
 const W = 1024, H = 1536;
 const px = (v: number) => `${(v / W) * 100}cqw`;
-type Box = { wrap?: boolean; x: number; y: number; w: number; h: number; size: number; max: number; color?: string; weight?: number; align?: "left" | "center" };
+type Box = { font?: "serif"|"sans"|"mukta"; wrap?: boolean; x: number; y: number; w: number; h: number; size: number; max: number; color?: string; weight?: number; align?: "left" | "center" };
 
 const B: Record<string, Box> = {
-  om: { x: 400, y: 100, w: 225, h: 46, size: 36, max: 12, weight: 800 },
-  title: { x: 290, y: 168, w: 444, h: 76, size: 74, max: 12, color: "#fff", weight: 800 },
-  shloka: { wrap: true, x: 295, y: 284, w: 470, h: 66, size: 25, max: 40, weight: 700 },
-  salutation: { x: 466, y: 442, w: 200, h: 32, size: 27, max: 14, weight: 700, align: "left" },
-  intro: { wrap: true, x: 480, y: 470, w: 450, h: 62, size: 26, max: 46, weight: 600 },
-  name: { x: 490, y: 551, w: 410, h: 64, size: 54, max: 16, weight: 800 },
-  after: { x: 455, y: 624, w: 490, h: 66, size: 29, max: 40, weight: 600 },
-  invite: { wrap: true, x: 440, y: 690, w: 500, h: 92, size: 27, max: 44, weight: 600 },
-  sched: { x: 575, y: 826, w: 228, h: 38, size: 36, max: 14, color: "#fff", weight: 800 },
-  sw: { x: 150, y: 890, w: 125, h: 36, size: 28, max: 10, color: "#fff", weight: 700 },
-  name2: { x: 62, y: 925, w: 298, h: 52, size: 37, max: 18, color: "#fff", weight: 800 },
-  swDate: { x: 112, y: 1000, w: 195, h: 90, size: 28, max: 14, weight: 700 },
-  familyT: { x: 225, y: 1124, w: 132, h: 26, size: 31, max: 8, color: "#fff", weight: 800 },
-  family: { wrap: true, x: 80, y: 1170, w: 420, h: 128, size: 27, max: 40, weight: 600 },
-  regT: { x: 688, y: 1124, w: 100, h: 26, size: 31, max: 8, color: "#fff", weight: 800 },
-  rep: { x: 580, y: 1166, w: 360, h: 56, size: 47, max: 16, weight: 800 },
-  addr: { x: 595, y: 1228, w: 345, h: 32, size: 25, max: 32, weight: 700, align: "left" },
-  phones: { x: 595, y: 1264, w: 360, h: 34, size: 26, max: 32, weight: 700, align: "left" },
+  om: { x: 400, y: 100, w: 225, h: 46, size: 36, max: 12, font: "sans", weight: 500 },
+  title: { x: 322, y: 184, w: 390, h: 88, size: 98, max: 10, color: "#fff", font: "serif", weight: 700 },
+  shloka: { wrap: true, x: 295, y: 284, w: 470, h: 66, size: 25, max: 40, font: "sans", weight: 500 },
+  salutation: { x: 466, y: 442, w: 200, h: 32, size: 27, max: 14, font: "sans", weight: 500, align: "left" },
+  intro: { wrap: true, x: 480, y: 470, w: 450, h: 62, size: 26, max: 46, font: "sans", weight: 500 },
+  name: { x: 490, y: 551, w: 410, h: 64, size: 54, max: 16, font: "serif", weight: 800 },
+  after: { x: 455, y: 624, w: 490, h: 66, size: 29, max: 40, font: "sans", weight: 500 },
+  invite: { wrap: true, x: 440, y: 690, w: 500, h: 92, size: 27, max: 44, font: "sans", weight: 500 },
+  sched: { x: 575, y: 829, w: 228, h: 38, size: 36, max: 14, color: "#fff", font: "mukta", weight: 600 },
+  sw: { x: 150, y: 890, w: 125, h: 36, size: 28, max: 10, color: "#fff", font: "sans", weight: 500 },
+  name2: { x: 62, y: 925, w: 298, h: 52, size: 37, max: 18, color: "#fff", font: "serif", weight: 800 },
+  swDate: { x: 112, y: 1000, w: 195, h: 90, size: 28, max: 14, font: "sans", weight: 500 },
+  familyT: { x: 225, y: 1128, w: 132, h: 26, size: 31, max: 8, color: "#fff", font: "mukta", weight: 600 },
+  family: { wrap: true, x: 80, y: 1170, w: 420, h: 128, size: 27, max: 40, font: "sans", weight: 400 },
+  regT: { x: 688, y: 1128, w: 100, h: 26, size: 31, max: 8, color: "#fff", font: "mukta", weight: 600 },
+  rep: { x: 580, y: 1166, w: 360, h: 56, size: 47, max: 16, font: "sans", weight: 400 },
+  addr: { x: 595, y: 1228, w: 345, h: 32, size: 25, max: 32, font: "sans", weight: 400, align: "left" },
+  phones: { x: 595, y: 1264, w: 360, h: 34, size: 26, max: 32, font: "sans", weight: 400, align: "left" },
 };
+const FAM: Record<string,string> = {serif:'"Noto Serif Devanagari",serif',sans:'"Noto Sans Devanagari",sans-serif',mukta:'Mukta,"Noto Sans Devanagari",sans-serif'};
 const EV_ROWS = [905, 949, 992, 1041];
 
 function style(b: Box, text: string): CSSProperties {
@@ -35,7 +36,7 @@ function style(b: Box, text: string): CSSProperties {
   const k = Math.min(1, b.max / Math.max(longest, len > 0 ? 1 : 1));
   return {
     left: px(b.x), top: px(b.y), width: px(b.w), height: px(b.h),
-    fontSize: px(b.size * k), color: b.color || "#0a0a0a", fontWeight: b.weight || 700,
+    fontSize: px(b.size * k), color: b.color || "#0a0a0a", fontWeight: b.weight || 500, fontFamily: FAM[b.font || "sans"],
     textAlign: b.align || "center",
   };
 }
@@ -86,10 +87,10 @@ export function MemorialCard({
       <T k="swDate" text={`स्वर्गवास\n${c.deathDate}\n(${c.deathDay})`} />
       {EV_ROWS.map((cy, i) => ev[i] && (
         <div key={i}>
-          <div className="mem-t" style={{ left: px(458), top: px(cy - 22), width: px(264), height: px(44), fontSize: px(26), fontWeight: 600, textAlign: "left", color: "#0a0a0a" }}>
+          <div className="mem-t" style={{ left: px(458), top: px(cy - 22), width: px(264), height: px(44), fontSize: px(24), fontWeight: 600, fontFamily: FAM.mukta, textAlign: "left", color: "#0a0a0a" }}>
             <span>{`दिनांक ${ev[i].date} (${ev[i].day})`}</span>
           </div>
-          <div className="mem-t" style={{ left: px(800), top: px(cy - 22), width: px(172), height: px(44), fontSize: px(24 * Math.min(1, 16 / Math.max(1, [...ev[i].title].length))), fontWeight: 700, textAlign: "left", color: "#0a0a0a" }}>
+          <div className="mem-t" style={{ left: px(800), top: px(cy - 22), width: px(172), height: px(44), fontSize: px(24 * Math.min(1, 21 / Math.max(1, [...ev[i].title].length))), fontWeight: 600, fontFamily: FAM.mukta, textAlign: "left", color: "#0a0a0a" }}>
             <span>{ev[i].title}</span>
           </div>
         </div>
