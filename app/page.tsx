@@ -1,23 +1,28 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { toPng } from "html-to-image";
-import jsPDF from "jspdf";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { defaultContent } from "@/lib/default-content";
 import "./public.css";
 
 import { MemorialCard } from "@/components/MemorialCard";
 import type { CardContent } from "@/lib/card-types";
+import { renderToCanvas } from "@/lib/render-card";
+
+type Fmt = "pdf" | "jpg";
+const EXPORT_SCALE = 1.5; // 1536 x 2304 px: sharp text, small file
 
 export default function Home() {
  const [content,setContent]=useState<CardContent>(defaultContent as CardContent);
  const [customCss,setCustomCss]=useState("");
  const [recipient,setRecipient]=useState("");
  const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
- const [format,setFormat]=useState<"pdf"|"png">("pdf");
+ const [format,setFormat]=useState<Fmt>("pdf");
  const [status,setStatus]=useState("");
  const [busy,setBusy]=useState(false);
- const cardRef=useRef<HTMLDivElement>(null);
+ const [ready,setReady]=useState(false);
+ // file prepared in the background, so Download / Share react instantly
+ const prepared=useRef<{key:string;file:File}|null>(null);
+ const pending=useRef<{key:string;p:Promise<File>}|null>(null);
 
  useEffect(()=>{ (async()=>{
    if(!supabase) return;
@@ -26,24 +31,67 @@ export default function Home() {
    if(data?.custom_css) setCustomCss(data.custom_css);
  })(); },[]);
 
- async function makeFile() {
-  if(!cardRef.current) throw new Error("Card not ready");
-  const data=await toPng(cardRef.current,{pixelRatio:2,cacheBust:true,backgroundColor:"#fff"});
-  if(format==="png") return new File([await (await fetch(data)).blob()],"shradhanjali-card.png",{type:"image/png"});
-  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:[210,315]});
-  pdf.addImage(data,"PNG",0,0,210,315);
-  return new File([pdf.output("blob")],"shradhanjali-card.pdf",{type:"application/pdf"});
- }
+ const keyOf=useCallback(()=>JSON.stringify([content,recipient.trim(),recipientTitle,format]),[content,recipient,recipientTitle,format]);
+
+ const build=useCallback(async(key:string):Promise<File>=>{
+  if(prepared.current?.key===key) return prepared.current.file;
+  if(pending.current?.key===key) return pending.current.p;
+  const p=(async()=>{
+   const cv=document.createElement("canvas");
+   await renderToCanvas(cv,{c:content,recipient,recipientTitle},EXPORT_SCALE);
+   const jpg:string=cv.toDataURL("image/jpeg",0.9);
+   let file:File;
+   if(format==="jpg"){
+    const blob=await new Promise<Blob>((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("toBlob failed")),"image/jpeg",0.9));
+    file=new File([blob],"shradhanjali-card.jpg",{type:"image/jpeg"});
+   } else {
+    const {jsPDF}=await import("jspdf"); // loaded only when needed
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:[210,315],compress:true});
+    pdf.addImage(jpg,"JPEG",0,0,210,315,undefined,"FAST");
+    file=new File([pdf.output("blob")],"shradhanjali-card.pdf",{type:"application/pdf"});
+   }
+   prepared.current={key,file};
+   return file;
+  })();
+  pending.current={key,p};
+  try{return await p;}finally{if(pending.current?.p===p)pending.current=null;}
+ },[content,recipient,recipientTitle,format]);
+
+ // prepare quietly ~0.6s after the visitor stops typing
+ useEffect(()=>{
+  const key=keyOf(); setReady(prepared.current?.key===key);
+  if(prepared.current?.key===key) return;
+  const t=setTimeout(()=>{build(key).then(()=>{if(keyOf()===key)setReady(true);}).catch(()=>{});},600);
+  return()=>clearTimeout(t);
+ },[keyOf,build]);
+
+ function save(f:File){const u=URL.createObjectURL(f);const a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000);}
+
  async function download() {
-  try{setBusy(true);setStatus("फाइल तैयार हो रही है...");const f=await makeFile();const u=URL.createObjectURL(f);const a=document.createElement("a");a.href=u;a.download=f.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),5000);setStatus("फाइल डाउनलोड हो गई।");}
-  catch{setStatus("फाइल नहीं बन सकी। दोबारा प्रयास करें।");}finally{setBusy(false);}
+  try{
+   setBusy(true);const key=keyOf();
+   if(prepared.current?.key!==key) setStatus("फाइल तैयार हो रही है...");
+   const f=await build(key);save(f);setStatus("फाइल डाउनलोड हो गई।");
+  }catch{setStatus("फाइल नहीं बन सकी। दोबारा प्रयास करें।");}finally{setBusy(false);}
  }
  async function share() {
-  try{setBusy(true);setStatus("WhatsApp के लिए फाइल तैयार हो रही है...");const f=await makeFile();const nav=navigator as Navigator&{canShare?:(d:ShareData)=>boolean};
-   const text=`${recipient.trim()?recipientTitle+" "+recipient.trim()+" जी, ":""}सादर आमंत्रण। कृपया शोक-संदेश एवं श्राद्ध-कार्यक्रम में उपस्थित होकर हमें कृतार्थ करें।`;
-   if(navigator.share&&nav.canShare?.({files:[f]})){await navigator.share({files:[f],title:cTitle(content),text});setStatus("Share menu खुल गया है। WhatsApp चुनें।");}
-   else {const u=URL.createObjectURL(f);const a=document.createElement("a");a.href=u;a.download=f.name;a.click();window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");setStatus("फाइल डाउनलोड हुई है। WhatsApp में Attach करके भेजें।");setTimeout(()=>URL.revokeObjectURL(u),10000);}
-  }catch(e){if(e instanceof Error&&e.name==="AbortError")setStatus("Sharing रद्द की गई।");else setStatus("Share नहीं हो सका। फाइल डाउनलोड करके WhatsApp में भेजें।");}finally{setBusy(false);}
+  const nav=navigator as Navigator&{canShare?:(d:ShareData)=>boolean};
+  const text=`${recipient.trim()?recipientTitle+" "+recipient.trim()+" जी, ":""}सादर आमंत्रण। कृपया शोक-संदेश एवं श्राद्ध-कार्यक्रम में उपस्थित होकर हमें कृतार्थ करें।`;
+  try{
+   setBusy(true);const key=keyOf();
+   // prepared file => share() is called immediately, while the tap is still "fresh" (needed by iOS / Chrome)
+   const f=prepared.current?.key===key?prepared.current.file:await build(key);
+   if(navigator.share&&nav.canShare?.({files:[f]})){
+    await navigator.share({files:[f],title:cTitle(content),text});setStatus("Share menu खुल गया है। WhatsApp चुनें।");
+   } else {
+    save(f);window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");
+    setStatus("फाइल डाउनलोड हुई है। WhatsApp में Attach करके भेजें।");
+   }
+  }catch(e){
+   if(e instanceof Error&&e.name==="AbortError")setStatus("Sharing रद्द की गई।");
+   else if(e instanceof Error&&e.name==="NotAllowedError"){setStatus("फाइल तैयार है। एक बार फिर 'WhatsApp पर शेयर करें' दबाएँ।");}
+   else setStatus("Share नहीं हो सका। फाइल डाउनलोड करके WhatsApp में भेजें।");
+  }finally{setBusy(false);}
  }
  const c=content;
  return <main className="public-shell">
@@ -61,14 +109,14 @@ export default function Home() {
     <small className="template-note">मूल डिजाइन, सजावट, चित्र और हिंदी फॉन्ट आपके दिए हुए पोस्टर से ज्यों-के-त्यों लिए गए हैं।</small>
     <label>फाइल का प्रकार</label><div className="format-switch">
       <button className={format==="pdf"?"selected":""} onClick={()=>setFormat("pdf")}>PDF</button>
-      <button className={format==="png"?"selected":""} onClick={()=>setFormat("png")}>PNG Image</button>
+      <button className={format==="jpg"?"selected":""} onClick={()=>setFormat("jpg")}>Image (JPG)</button>
     </div>
     <button className="download-action" disabled={busy} onClick={download}>↓ &nbsp; डाउनलोड करें</button>
     <button className="share-action" disabled={busy} onClick={share}>WhatsApp पर शेयर करें</button>
     {status&&<p className="public-status" role="status">{status}</p>}
     <p className="privacy-hint">मूल पोस्टर का डिजाइन और फोटो बदले बिना रखा गया है।</p>
    </aside>
-   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>Original Poster · 2:3</span></div><div className="preview-scroll"><div ref={cardRef}><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle}/></div></div></section>
+   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle}/></div></div></section>
   </section>
  </main>
 }
