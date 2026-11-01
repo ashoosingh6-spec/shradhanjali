@@ -1,4 +1,4 @@
- "use client";
+"use client";
 import { useEffect, useRef, useState } from "react";
 import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
