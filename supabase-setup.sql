@@ -59,5 +59,25 @@ values (
 )
 on conflict (id) do nothing;
 
+-- 3) Photo uploads: public-read bucket, only the designated admin can write.
+insert into storage.buckets (id, name, public) values ('portraits', 'portraits', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Public can view portraits" on storage.objects;
+create policy "Public can view portraits" on storage.objects for select to anon, authenticated
+using (bucket_id = 'portraits');
+
+drop policy if exists "Admin can upload portraits" on storage.objects;
+create policy "Admin can upload portraits" on storage.objects for insert to authenticated
+with check (bucket_id = 'portraits' and exists (select 1 from public.memorial_card m where m.id = 1 and m.admin_user_id = auth.uid()));
+
+drop policy if exists "Admin can update portraits" on storage.objects;
+create policy "Admin can update portraits" on storage.objects for update to authenticated
+using (bucket_id = 'portraits' and exists (select 1 from public.memorial_card m where m.id = 1 and m.admin_user_id = auth.uid()));
+
+drop policy if exists "Admin can delete portraits" on storage.objects;
+create policy "Admin can delete portraits" on storage.objects for delete to authenticated
+using (bucket_id = 'portraits' and exists (select 1 from public.memorial_card m where m.id = 1 and m.admin_user_id = auth.uid()));
+
 -- Do not expose service_role key in the browser.
 -- No public INSERT/DELETE policies are intentionally created.

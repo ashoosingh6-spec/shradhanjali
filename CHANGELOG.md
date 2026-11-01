@@ -6,3 +6,9 @@
 - श्रीमान is selected by default; श्रीमती is the alternate checkbox choice.
 - Aligns PNG and PDF export to the source poster's 2:3 ratio.
 - Public and Admin previews share the same template asset and overlay component.
+
+## 3.1.0
+- Card text is now fully editable: the poster artwork is a clean plate (`public/shradhanjali-plate.jpg`) and every field is rendered live on top of it.
+- Admin can upload the portrait directly (stored in Supabase Storage bucket `portraits`); the original portrait is the default.
+- Save now verifies that a row was really updated and explains the RLS/admin_user_id problem instead of failing silently.
+- New `supabase-fix.sql` for existing projects.

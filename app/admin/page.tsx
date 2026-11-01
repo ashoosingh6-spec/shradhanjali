@@ -25,7 +25,26 @@ export default function AdminPage(){
  async function load(){if(!supabase)return;setBusy(true);const {data,error}=await supabase.from("memorial_card").select("content,custom_css").eq("id",1).single();setBusy(false);if(error){setStatus("Card load नहीं हुआ: "+error.message);return;}const next={...defaultContent,...data.content};setContent(next);setJson(JSON.stringify(next,null,2));setCss(data.custom_css||"");setStatus("Saved card content loaded.");}
  useEffect(()=>{if(session)load();},[session]);
  function update(key:string,value:any){const next={...content,[key]:value};setContent(next);setJson(JSON.stringify(next,null,2));}
- async function save(){if(!supabase||!session)return;let parsed;try{parsed=JSON.parse(json);}catch{setStatus("JSON wording में syntax error है। पहले उसे ठीक करें।");return;}setBusy(true);const {error}=await supabase.from("memorial_card").update({content:parsed,custom_css:css,updated_at:new Date().toISOString()}).eq("id",1);setBusy(false);if(error){setStatus("Save नहीं हुआ: "+error.message);return;}setContent(parsed);setStatus("सभी बदलाव सुरक्षित कर दिए गए हैं। Public card refresh करने पर नया wording दिखेगा।");}
+ async function save(){if(!supabase||!session)return;let parsed;try{parsed=JSON.parse(json);}catch{setStatus("JSON wording में syntax error है। पहले उसे ठीक करें।");return;}setBusy(true);const {data,error}=await supabase.from("memorial_card").update({content:parsed,custom_css:css,updated_at:new Date().toISOString()}).eq("id",1).select("id");setBusy(false);if(error){setStatus("Save नहीं हुआ: "+error.message);return;}if(!data||data.length===0){setStatus("Save नहीं हुआ: database ने कोई row update नहीं की। इसका मतलब आपका login user memorial_card.admin_user_id से match नहीं करता (या id=1 row मौजूद नहीं है)। supabase-fix.sql चलाकर ठीक करें।");return;}setContent(parsed);setStatus("✓ सभी बदलाव database में सुरक्षित हो गए। Public card refresh करने पर नया wording दिखेगा।");}
+ async function uploadPhoto(file:File){
+  if(!supabase||!session)return;
+  if(!file.type.startsWith("image/")){setStatus("कृपया केवल image file चुनें।");return;}
+  setBusy(true);setStatus("फोटो तैयार हो रही है...");
+  try{
+   const bmp=await createImageBitmap(file);
+   const max=1000,sc=Math.min(1,max/Math.max(bmp.width,bmp.height));
+   const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);
+   cv.getContext("2d")!.drawImage(bmp,0,0,cv.width,cv.height);
+   const blob:Blob=await new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("compress failed")),"image/jpeg",0.9));
+   const path=`portrait-${Date.now()}.jpg`;
+   const {error}=await supabase.storage.from("portraits").upload(path,blob,{contentType:"image/jpeg",upsert:true,cacheControl:"3600"});
+   if(error){setStatus("Photo upload नहीं हुआ: "+error.message+" (supabase-setup.sql / supabase-fix.sql में storage वाला हिस्सा चलाया है?)");return;}
+   const {data}=supabase.storage.from("portraits").getPublicUrl(path);
+   update("portraitUrl",data.publicUrl);
+   setStatus("फोटो upload हो गई और preview में लग गई है। इसे live करने के लिए Save Changes दबाएँ।");
+  }catch(e){setStatus("Photo upload नहीं हुआ: "+(e instanceof Error?e.message:"unknown error"));}
+  finally{setBusy(false);}
+ }
  async function logout(){await supabase?.auth.signOut();setSession(null);}
  if(!session)return <main className="admin-shell"><form className="login-box" onSubmit={login}><div className="admin-symbol">ॐ</div><p className="admin-eyebrow">RESTRICTED ACCESS</p><h1>Admin Login</h1><p>कार्ड का wording और design केवल अधिकृत Admin बदल सकता है।</p><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/><button disabled={busy}>{busy?"Please wait...":"Secure Login"}</button>{status&&<small>{status}</small>}{!supabase&&<small className="error">Supabase env configuration missing.</small>}</form></main>;
  return <main className="admin-shell">
@@ -36,7 +55,12 @@ export default function AdminPage(){
     <div className="editor-tabs"><button className={mode==="fields"?"on":""} onClick={()=>setMode("fields")}>Wording Fields</button><button className={mode==="json"?"on":""} onClick={()=>setMode("json")}>JSON / Source</button><button className={mode==="css"?"on":""} onClick={()=>setMode("css")}>Custom CSS</button></div>
     {mode==="fields"&&<div className="fields">
       <p className="editor-note">यहाँ बदलाव करें। फिर Save Changes दबाएँ। Recipient का नाम visitor हर बार खुद भरेगा।</p>
-      {(["omText","title","shloka","recipientPlaceholder","salutation","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones","footer","portraitUrl"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
+      {(["omText","title","shloka","salutation","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
+      <div className="photo-editor"><b>दिवंगत की फोटो</b>
+       <div className="photo-row"><div className="photo-thumb"><img src={content.portraitUrl||"/default-portrait.jpg"} alt="portrait"/></div>
+       <div><input type="file" accept="image/*" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadPhoto(f);e.target.value="";}}/>
+       {content.portraitUrl&&<button type="button" className="add-event" onClick={()=>update("portraitUrl","")}>मूल फोटो वापस लगाएँ</button>}</div></div>
+       <small>फोटो चुनते ही upload होकर preview में दिखेगी। उसके बाद Save Changes दबाएँ।</small></div>
       <label>Family names (one per line)<textarea rows={5} value={(content.familyLines||[]).join("\n")} onChange={e=>update("familyLines",e.target.value.split("\n"))}/></label>
       <div className="event-editor"><h3>श्राद्ध कार्यक्रम</h3>{(content.events||[]).map((ev:Event,i:number)=><div className="event-fields" key={i}><input aria-label="Date" value={ev.date} placeholder="Date" onChange={e=>{const a=[...content.events];a[i]={...a[i],date:e.target.value};update("events",a)}}/><input aria-label="Day" value={ev.day} placeholder="Day" onChange={e=>{const a=[...content.events];a[i]={...a[i],day:e.target.value};update("events",a)}}/><input aria-label="Event" value={ev.title} placeholder="Event" onChange={e=>{const a=[...content.events];a[i]={...a[i],title:e.target.value};update("events",a)}}/><button onClick={()=>update("events",content.events.filter((_:Event,j:number)=>j!==i))}>×</button></div>)}<button className="add-event" onClick={()=>update("events",[...(content.events||[]),{date:"",day:"",title:""}])}>+ Add Event</button></div>
     </div>}
@@ -51,7 +75,7 @@ export default function AdminPage(){
       <label className="recipient-check"><input type="checkbox" checked={previewRecipientTitle==="श्रीमती"} onChange={()=>setPreviewRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
     </div>
     <label htmlFor="admin-preview-recipient">नाम</label><input id="admin-preview-recipient" value={previewRecipient} onChange={e=>setPreviewRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" />
-   </div><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} recipientTitle={previewRecipientTitle} photo={content.portraitUrl||""}/></div></div></section>
+   </div><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} recipientTitle={previewRecipientTitle}/></div></div></section>
   </section>
  </main>;
 }
