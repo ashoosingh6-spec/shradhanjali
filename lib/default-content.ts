@@ -46,4 +46,4 @@ export const defaultContent = {
   "phones": "9939341216, 9708084906",
   "footer": "॥ दिवंगत आत्मा को विनम्र श्रद्धांजलि ॥",
   "portraitUrl": ""
-} as const;\n
+} as const;
