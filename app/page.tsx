@@ -13,7 +13,7 @@ export default function Home() {
  const [content,setContent]=useState<CardContent>(defaultContent as CardContent);
  const [customCss,setCustomCss]=useState("");
  const [recipient,setRecipient]=useState("");
- const [photo,setPhoto]=useState("");
+ const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
  const [format,setFormat]=useState<"pdf"|"png">("pdf");
  const [status,setStatus]=useState("");
  const [busy,setBusy]=useState(false);
@@ -26,20 +26,12 @@ export default function Home() {
    if(data?.custom_css) setCustomCss(data.custom_css);
  })(); },[]);
 
- function choosePhoto(e:React.ChangeEvent<HTMLInputElement>) {
-  const f=e.target.files?.[0]; if(!f)return;
-  if(!f.type.startsWith("image/")){setStatus("कृपया image file चुनें।");return;}
-  if(f.size>8*1024*1024){setStatus("फोटो 8 MB से छोटी होनी चाहिए।");return;}
-  const r=new FileReader();r.onload=()=>setPhoto(String(r.result));r.readAsDataURL(f);
- }
  async function makeFile() {
   if(!cardRef.current) throw new Error("Card not ready");
   const data=await toPng(cardRef.current,{pixelRatio:2,cacheBust:true,backgroundColor:"#fff"});
   if(format==="png") return new File([await (await fetch(data)).blob()],"shradhanjali-card.png",{type:"image/png"});
-  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-  const w=pdf.internal.pageSize.getWidth(),h=pdf.internal.pageSize.getHeight(),m=5;
-  const scale=Math.min((w-2*m)/794,(h-2*m)/1123),dw=794*scale,dh=1123*scale;
-  pdf.addImage(data,"PNG",(w-dw)/2,(h-dh)/2,dw,dh);
+  const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:[210,315]});
+  pdf.addImage(data,"PNG",0,0,210,315);
   return new File([pdf.output("blob")],"shradhanjali-card.pdf",{type:"application/pdf"});
  }
  async function download() {
@@ -48,7 +40,7 @@ export default function Home() {
  }
  async function share() {
   try{setBusy(true);setStatus("WhatsApp के लिए फाइल तैयार हो रही है...");const f=await makeFile();const nav=navigator as Navigator&{canShare?:(d:ShareData)=>boolean};
-   const text=`${recipient.trim()?recipient.trim()+" जी, ":""}सादर आमंत्रण। कृपया शोक-संदेश एवं श्राद्ध-कार्यक्रम में उपस्थित होकर हमें कृतार्थ करें।`;
+   const text=`${recipient.trim()?recipientTitle+" "+recipient.trim()+" जी, ":""}सादर आमंत्रण। कृपया शोक-संदेश एवं श्राद्ध-कार्यक्रम में उपस्थित होकर हमें कृतार्थ करें।`;
    if(navigator.share&&nav.canShare?.({files:[f]})){await navigator.share({files:[f],title:cTitle(content),text});setStatus("Share menu खुल गया है। WhatsApp चुनें।");}
    else {const u=URL.createObjectURL(f);const a=document.createElement("a");a.href=u;a.download=f.name;a.click();window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank","noopener,noreferrer");setStatus("फाइल डाउनलोड हुई है। WhatsApp में Attach करके भेजें।");setTimeout(()=>URL.revokeObjectURL(u),10000);}
   }catch(e){if(e instanceof Error&&e.name==="AbortError")setStatus("Sharing रद्द की गई।");else setStatus("Share नहीं हो सका। फाइल डाउनलोड करके WhatsApp में भेजें।");}finally{setBusy(false);}
@@ -59,10 +51,14 @@ export default function Home() {
   <section className="public-grid">
    <aside className="public-controls">
     <h2>कार्ड व्यक्तिगत करें</h2>
-    <label>प्राप्तकर्ता का नाम</label><input value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="श्री अशोक कुमार जी" maxLength={90}/>
-    <small>यह नाम कार्ड में श्रीमान / श्रीमती की जगह आएगा।</small>
-    <label>दिवंगत व्यक्ति की फोटो</label><input type="file" accept="image/*" onChange={choosePhoto}/>
-    <small>वैकल्पिक · JPG / PNG / WEBP · अधिकतम 8 MB</small>
+    <label>प्राप्तकर्ता का संबोधन</label>
+    <div className="recipient-title-options" role="group" aria-label="प्राप्तकर्ता का संबोधन चुनें">
+      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमान"} onChange={()=>setRecipientTitle("श्रीमान")}/> <span>श्रीमान</span></label>
+      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमती"} onChange={()=>setRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
+    </div>
+    <label htmlFor="recipient-name">नाम लिखें</label><input id="recipient-name" value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" maxLength={32}/>
+    <small>चुना हुआ संबोधन और नाम कार्ड में डॉटेड लाइन पर दिखाई देगा।</small>
+    <small className="template-note">मूल डिजाइन, सजावट, चित्र और हिंदी फॉन्ट आपके दिए हुए पोस्टर से ज्यों-के-त्यों लिए गए हैं।</small>
     <label>फाइल का प्रकार</label><div className="format-switch">
       <button className={format==="pdf"?"selected":""} onClick={()=>setFormat("pdf")}>PDF</button>
       <button className={format==="png"?"selected":""} onClick={()=>setFormat("png")}>PNG Image</button>
@@ -70,9 +66,9 @@ export default function Home() {
     <button className="download-action" disabled={busy} onClick={download}>↓ &nbsp; डाउनलोड करें</button>
     <button className="share-action" disabled={busy} onClick={share}>WhatsApp पर शेयर करें</button>
     {status&&<p className="public-status" role="status">{status}</p>}
-    <p className="privacy-hint">आपकी चुनी हुई फोटो इसी डिवाइस पर प्रोसेस होती है; सर्वर पर अपलोड नहीं होती।</p>
+    <p className="privacy-hint">मूल पोस्टर का डिजाइन और फोटो बदले बिना रखा गया है।</p>
    </aside>
-   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>A4 Portrait</span></div><div className="preview-scroll"><div ref={cardRef}><MemorialCard c={c} recipient={recipient} photo={photo||c.portraitUrl}/></div></div></section>
+   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>Original Poster · 2:3</span></div><div className="preview-scroll"><div ref={cardRef}><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle}/></div></div></section>
   </section>
  </main>
 }

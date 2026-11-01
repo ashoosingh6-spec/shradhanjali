@@ -16,6 +16,7 @@ export default function AdminPage(){
  const [json,setJson]=useState(JSON.stringify(defaultContent,null,2));
  const [css,setCss]=useState("");
  const [previewRecipient,setPreviewRecipient]=useState("");
+ const [previewRecipientTitle,setPreviewRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
  const [mode,setMode]=useState<"fields"|"json"|"css">("fields");
  const [status,setStatus]=useState("");
  const [busy,setBusy]=useState(false);
@@ -43,7 +44,14 @@ export default function AdminPage(){
     {mode==="css"&&<div className="code-panel"><p className="editor-note">Advanced design overrides के लिए CSS लिखें। केवल Admin इसे edit कर सकता है।</p><textarea spellCheck={false} value={css} onChange={e=>setCss(e.target.value)} placeholder="/* Example: .mem-card h1 { letter-spacing: 1px; } */"/></div>}
     {status&&<p className="admin-status" role="status">{status}</p>}
    </aside>
-   <section className="editor-preview"><div className="editor-preview-head"><h2>Live Preview</h2><span>Public page design</span></div><label className="preview-recipient">Preview प्राप्तकर्ता का नाम <input value={previewRecipient} onChange={e=>setPreviewRecipient(e.target.value)} placeholder="श्री अशोक कुमार जी" /></label><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} photo={content.portraitUrl||""}/></div></div></section>
+   <section className="editor-preview"><div className="editor-preview-head"><h2>Live Preview</h2><span>Public page design</span></div><p className="template-admin-note">यह पेज आपके दिए हुए मूल पोस्टर को background template की तरह दिखाता है। उसकी सजावट, फोटो, fonts और पहले से छपा wording image में स्थिर हैं। इस version में visitor केवल श्रीमान / श्रीमती और प्राप्तकर्ता का नाम बदल सकता है।</p><div className="preview-recipient">
+    <span>Preview प्राप्तकर्ता का संबोधन</span>
+    <div className="recipient-title-options">
+      <label className="recipient-check"><input type="checkbox" checked={previewRecipientTitle==="श्रीमान"} onChange={()=>setPreviewRecipientTitle("श्रीमान")}/> <span>श्रीमान</span></label>
+      <label className="recipient-check"><input type="checkbox" checked={previewRecipientTitle==="श्रीमती"} onChange={()=>setPreviewRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
+    </div>
+    <label htmlFor="admin-preview-recipient">नाम</label><input id="admin-preview-recipient" value={previewRecipient} onChange={e=>setPreviewRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" />
+   </div><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} recipientTitle={previewRecipientTitle} photo={content.portraitUrl||""}/></div></div></section>
   </section>
  </main>;
 }
