@@ -15,7 +15,7 @@ export default function Home() {
  const [content,setContent]=useState<CardContent>(defaultContent as CardContent);
  const [customCss,setCustomCss]=useState("");
  const [recipient,setRecipient]=useState("");
- const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
+ const [recipientTitle,setRecipientTitle]=useState<"श्रीमान्"|"श्रीमती">("श्रीमान्");
  const [format,setFormat]=useState<Fmt>("pdf");
  const [design,setDesign]=useState<Design>(1);
  const [status,setStatus]=useState("");
@@ -39,7 +39,8 @@ export default function Home() {
   if(pending.current?.key===key) return pending.current.p;
   const p=(async()=>{
    const cv=document.createElement("canvas");
-   await renderToCanvas(cv,{c:content,recipient,recipientTitle,design},EXPORT_SCALE);
+   // cast needed only until render-card's type is updated to "श्रीमान्"
+   await renderToCanvas(cv,{c:content,recipient,recipientTitle: recipientTitle as any,design},EXPORT_SCALE);
    const jpg:string=cv.toDataURL("image/jpeg",0.9);
    let file:File;
    if(format==="jpg"){
@@ -102,7 +103,7 @@ export default function Home() {
     <h2>कार्ड व्यक्तिगत करें</h2>
     <label>प्राप्तकर्ता का संबोधन</label>
     <div className="recipient-title-options" role="group" aria-label="प्राप्तकर्ता का संबोधन चुनें">
-      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमान"} onChange={()=>setRecipientTitle("श्रीमान")}/> <span>श्रीमान</span></label>
+      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमान्"} onChange={()=>setRecipientTitle("श्रीमान्")}/> <span>श्रीमान्</span></label>
       <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमती"} onChange={()=>setRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
     </div>
     <label htmlFor="recipient-name">नाम लिखें</label><input id="recipient-name" value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" maxLength={32}/>
@@ -120,7 +121,7 @@ export default function Home() {
     {status&&<p className="public-status" role="status">{status}</p>}
     <p className="privacy-hint">मूल पोस्टर का डिजाइन और फोटो बदले बिना रखा गया है।</p>
    </aside>
-   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle} design={design}/></div></div></section>
+   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle as any} design={design}/></div></div></section>
   </section>
  </main>
 }
