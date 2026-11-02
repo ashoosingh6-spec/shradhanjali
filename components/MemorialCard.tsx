@@ -10,7 +10,7 @@ import { renderToCanvas, DESIGNS, type Design } from "@/lib/render-card";
 export function MemorialCard({
   c, recipient, recipientTitle = "श्रीमान", photo, design = 1,
 }: {
-  c: CardContent; recipient: string; recipientTitle?: "श्रीमान्" | "श्रीमती"; photo?: string; design?: Design;
+  c: CardContent; recipient: string; recipientTitle?: "श्रीमान" | "श्रीमती"; photo?: string; design?: Design;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const portrait = photo || c.portraitUrl || "";

@@ -57,7 +57,7 @@ export default function AdminPage(){
     <div className="editor-tabs"><button className={mode==="fields"?"on":""} onClick={()=>setMode("fields")}>Wording Fields</button><button className={mode==="json"?"on":""} onClick={()=>setMode("json")}>JSON / Source</button><button className={mode==="css"?"on":""} onClick={()=>setMode("css")}>Custom CSS</button></div>
     {mode==="fields"&&<div className="fields">
       <p className="editor-note">यहाँ बदलाव करें। फिर Save Changes दबाएँ। Recipient का नाम visitor हर बार खुद भरेगा।</p>
-      {(["omText","title","shloka","salutation","salutation2","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
+      {(["omText","title","shloka","salutation","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
       <div className="photo-editor"><b>दिवंगत की फोटो</b>
        <div className="photo-row"><div className="photo-thumb"><img src={content.portraitUrl||"/default-portrait.jpg"} alt="portrait"/></div>
        <div><input type="file" accept="image/*" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadPhoto(f);e.target.value="";}}/>

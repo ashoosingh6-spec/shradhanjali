@@ -301,21 +301,19 @@ function drawCard2(ctx: Ctx, a: DrawArgs) {
   box(ctx, norm(c.title), { x: 560, y: 36, w: 415, h: 84, size: 84, min: 36, weight: 800, fam: "sans", color: WHITE, lh: 1.15 });
   box(ctx, norm(c.shloka), { x: 1124, y: 36, w: 352, h: 74, size: 24, min: 12, weight: B, fam: "sans", lh: 1.45 });
 
-  // greeting + recipient row
-  setFont(ctx, B, 38, "sans"); ctx.fillStyle = INK; ctx.textBaseline = "middle"; ctx.textAlign = "left";
-  ctx.fillText(norm(c.salutation2) || "सेवा में,", 392, 160);
+  // recipient row (starts directly with श्रीमान / श्रीमती, no "सेवा में")
   {
     const title = a.recipientTitle, name = a.recipient.trim();
-    setFont(ctx, B, 36, "sans");
-    const x0 = 455; ctx.fillText(title, x0, 207);
-    let x = x0 + lineW(ctx, title) + 12;
+    setFont(ctx, B, 38, "sans"); ctx.fillStyle = INK; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    const x0 = 392, ry = 168; ctx.fillText(title, x0, ry);
+    let x = x0 + lineW(ctx, title) + 14;
     if (name) {
-      let s = 36; setFont(ctx, B, s, "sans");
+      let s = 38; setFont(ctx, B, s, "sans");
       while (s > 18 && lineW(ctx, name) > 1480 - x - 30) { s -= 0.5; setFont(ctx, B, s, "sans"); }
-      ctx.fillText(name, x, 207); x += lineW(ctx, name) + 10;
+      ctx.fillText(name, x, ry); x += lineW(ctx, name) + 10;
     }
     ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.setLineDash([0.1, 7]);
-    ctx.beginPath(); ctx.moveTo(x, 217); ctx.lineTo(1485, 217); ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.moveTo(x, ry + 10); ctx.lineTo(1485, ry + 10); ctx.stroke(); ctx.restore();
   }
 
   // the two paragraphs (shared font size, auto-fit so they never collide with the table)
@@ -323,8 +321,8 @@ function drawCard2(ctx: Ctx, a: DrawArgs) {
     const one = (t: string) => norm(t).replace(/\s*\n\s*/g, " ");
     const p1 = `${one(c.intro)} ${norm(c.deceasedName)} ${one(c.afterDeath)} ${dot(norm(c.deathDate))} (${norm(c.deathDay)}) को हो गया है।`;
     const p2 = one(c.invitation);
-    const X = 392, Wd = 1098, ZY = 232, ZH = 176, IND = 52;
-    let size = 38, l1: string[] = [], l2: string[] = [];
+    const X = 392, Wd = 1098, ZY = 196, ZH = 212, IND = 52;
+    let size = 42, l1: string[] = [], l2: string[] = [];
     for (; size >= 20; size -= 0.5) {
       setFont(ctx, B, size, "sans");
       l1 = paraLines(ctx, p1, Wd, IND); l2 = paraLines(ctx, p2, Wd, IND);

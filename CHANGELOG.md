@@ -35,3 +35,6 @@
 ## 3.4.0
 - **Photo placement rebuilt.** Each design now has an exact photo mask (public/portrait-mask-1.png, portrait-mask-2.png): the photo is cut to the frame opening and sits *behind* the lilies / roses / diya flame, with no gaps or straight edges. Plates were cleaned of the sample photo (plate.jpg, plate-2.jpg).
 - **Admin: photo zoom + position sliders** (portraitZoom / portraitX / portraitY). Preview updates live; the same placement is used by both cards. EXIF rotation of uploaded photos is respected.
+
+## 3.4.1
+- Card 2 now starts directly with श्रीमान / श्रीमती (no "सेवा में,"); paragraphs use the freed space with a slightly larger font. Removed the salutation2 field.
