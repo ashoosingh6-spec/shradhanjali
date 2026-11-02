@@ -15,7 +15,7 @@ export default function Home() {
  const [content,setContent]=useState<CardContent>(defaultContent as CardContent);
  const [customCss,setCustomCss]=useState("");
  const [recipient,setRecipient]=useState("");
- const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
+ const [recipientTitle,setRecipientTitle]=useState<"श्रीमान्"|"श्रीमती">("श्रीमान्");
  const [format,setFormat]=useState<Fmt>("pdf");
  const [design,setDesign]=useState<Design>(1);
  const [status,setStatus]=useState("");
@@ -102,7 +102,7 @@ export default function Home() {
     <h2>कार्ड व्यक्तिगत करें</h2>
     <label>प्राप्तकर्ता का संबोधन</label>
     <div className="recipient-title-options" role="group" aria-label="प्राप्तकर्ता का संबोधन चुनें">
-      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमान"} onChange={()=>setRecipientTitle("श्रीमान")}/> <span>श्रीमान</span></label>
+      <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमान्"} onChange={()=>setRecipientTitle("श्रीमान्")}/> <span>श्रीमान्</span></label>
       <label className="recipient-check"><input type="checkbox" checked={recipientTitle==="श्रीमती"} onChange={()=>setRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
     </div>
     <label htmlFor="recipient-name">नाम लिखें</label><input id="recipient-name" value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" maxLength={32}/>
