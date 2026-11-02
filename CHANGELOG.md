@@ -28,3 +28,6 @@
 ## 3.3.0
 - **Card 2 added** (landscape 1536x1024, same look as the supplied design). Wording comes from the same database content as Card 1 (new optional field `salutation2` = "सेवा में," editable in admin). The visitor picks Card 1 / Card 2; preview, PDF (landscape page) and JPG follow the choice. Admin preview has the same switch.
 - New assets: public/shradhanjali-plate-2.jpg, public/default-portrait-2.jpg. Added Noto Sans Devanagari 700/800 font imports.
+
+## 3.3.1
+- Portrait now fills the whole frame in both designs. Card 1: the photo covers the full oval opening (the plate's sample man is no longer visible) and the lilies / diya flame are painted back in front. Card 2: photo fills the frame edge to edge (no white gaps), roses stay in front. Plate 2 / default-portrait-2 regenerated.

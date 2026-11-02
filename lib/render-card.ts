@@ -144,6 +144,13 @@ function stack(ctx: Ctx, paras: string[], z: { x: number; y: number; w: number; 
   });
 }
 
+/* parts of the plate that must stay IN FRONT of the portrait (lilies, leaves, diya flame) */
+const FOREGROUND_1: [number, number][][] = [
+  [[80,646],[104,648],[118,664],[120,684],[142,688],[150,700],[165,704],[170,712],[180,712],[192,725],[196,745],[190,764],[70,764],[70,646]],
+  [[395,640],[372,646],[358,664],[352,678],[342,684],[330,700],[318,704],[308,716],[296,728],[270,732],[268,748],[270,764],[400,764],[400,640]],
+  [[221,748],[233,716],[245,748]],
+];
+
 /* ---------- main draw ---------- */
 export type DrawArgs = {
   c: CardContent; recipient: string; recipientTitle: string; images: CardImages; design?: Design;
@@ -156,14 +163,24 @@ export function drawCard(ctx: Ctx, a: DrawArgs) {
   ctx.fillStyle = WHITE; ctx.fillRect(0, 0, W, H);
   ctx.drawImage(images.plate, 0, 0, W, H);
 
-  // portrait inside the oval frame
+  // portrait: fills the WHOLE oval opening of the frame (hides the artwork's sample photo),
+  // then the lilies / flame of the plate are painted back on top.
   if (images.portrait) {
+    const im = images.portrait, bx = 76, by = 368, bw = 316, bh = 376;
     ctx.save();
-    ctx.beginPath(); ctx.ellipse(103 + 140, 363 + 172, 140, 172, 0, 0, Math.PI * 2); ctx.clip();
-    const im = images.portrait, s = Math.max(280 / im.width, 344 / im.height);
+    ctx.beginPath(); ctx.ellipse(234, 556, 158, 188, 0, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = "#2a2a2a"; ctx.fillRect(bx, by, bw, bh);
+    const s = Math.max(bw / im.width, bh / im.height);
     const dw = im.width * s, dh = im.height * s;
-    ctx.drawImage(im, 103 + (280 - dw) / 2, 363 + (344 - dh) / 2, dw, dh);
+    ctx.drawImage(im, bx + (bw - dw) / 2, by + (bh - dh) * 0.1, dw, dh);
     ctx.restore();
+    for (const poly of FOREGROUND_1) {
+      ctx.save(); ctx.beginPath();
+      poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+      ctx.closePath(); ctx.clip();
+      ctx.drawImage(images.plate, 0, 0, W, H);
+      ctx.restore();
+    }
   }
 
   // ---- header
@@ -268,14 +285,15 @@ function drawCard2(ctx: Ctx, a: DrawArgs) {
   ctx.fillStyle = WHITE; ctx.fillRect(0, 0, 1536, 1024);
   ctx.drawImage(images.plate, 0, 0, 1536, 1024);
 
-  // portrait in the rounded frame (x 48..358, y 92..498)
+  // portrait fills the whole frame opening (x 46..357, y 87..491); roses sit in front of it
   if (images.portrait) {
-    const px = 48, py = 92, pw = 310, ph = 409;
+    const px = 46, py = 87, pw = 311.5, ph = 404;
     ctx.save();
-    ctx.beginPath(); (ctx as any).roundRect ? (ctx as any).roundRect(px, py, pw, ph, 14) : ctx.rect(px, py, pw, ph); ctx.clip();
+    ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
+    ctx.fillStyle = "#e9e9e9"; ctx.fillRect(px, py, pw, ph);
     const im = images.portrait, s = Math.max(pw / im.width, ph / im.height);
     const dw = im.width * s, dh = im.height * s;
-    ctx.drawImage(im, px + (pw - dw) / 2, py + Math.min(0, (ph - dh) * 0.25), dw, dh);
+    ctx.drawImage(im, px + (pw - dw) / 2, py + (ph - dh) * 0.12, dw, dh);
     ctx.restore();
   }
 
