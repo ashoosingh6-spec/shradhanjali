@@ -8,6 +8,11 @@ import type { CardContent } from "@/lib/card-types";
  *   so lines can never overlap, whatever wording the admin enters.
  * - No DOM-to-image conversion, no CSS container units: works on old Android / iOS Safari.
  */
+export type Design = 1 | 2;
+export const DESIGNS: Record<Design, { w: number; h: number; plate: string; portrait: string; name: string }> = {
+  1: { w: 1024, h: 1536, plate: "/shradhanjali-plate.jpg", portrait: "/default-portrait.jpg", name: "कार्ड 1 · खड़ा (Portrait)" },
+  2: { w: 1536, h: 1024, plate: "/shradhanjali-plate-2.jpg", portrait: "/default-portrait-2.jpg", name: "कार्ड 2 · आड़ा (Landscape)" },
+};
 export const W = 1024;
 export const H = 1536;
 
@@ -41,15 +46,15 @@ export function loadImage(src: string, cors = false): Promise<HTMLImageElement> 
   return p;
 }
 
-export async function loadCardImages(portraitUrl?: string): Promise<CardImages> {
-  const plate = loadImage("/shradhanjali-plate.jpg");
-  const fallback = () => loadImage("/default-portrait.jpg");
+export async function loadCardImages(portraitUrl?: string, design: Design = 1): Promise<CardImages> {
+  const plate = loadImage(DESIGNS[design].plate);
+  const fallback = () => loadImage(DESIGNS[design].portrait);
   const portrait = (portraitUrl ? loadImage(portraitUrl, true).catch(fallback) : fallback()).catch(() => null);
   return { plate: await plate, portrait: await portrait };
 }
 
 const FONT_SPECS: [string, string][] = [
-  ["700", SERIF], ["800", SERIF], ["400", SANS], ["500", SANS], ["600", MUKTA],
+  ["700", SERIF], ["800", SERIF], ["400", SANS], ["500", SANS], ["700", SANS], ["800", SANS], ["600", MUKTA],
 ];
 let fontsReady: Promise<void> | null = null;
 export function loadFonts(): Promise<void> {
@@ -141,10 +146,11 @@ function stack(ctx: Ctx, paras: string[], z: { x: number; y: number; w: number; 
 
 /* ---------- main draw ---------- */
 export type DrawArgs = {
-  c: CardContent; recipient: string; recipientTitle: string; images: CardImages;
+  c: CardContent; recipient: string; recipientTitle: string; images: CardImages; design?: Design;
 };
 
 export function drawCard(ctx: Ctx, a: DrawArgs) {
+  if (a.design === 2) return drawCard2(ctx, a);
   const { c, images } = a;
   ctx.save();
   ctx.fillStyle = WHITE; ctx.fillRect(0, 0, W, H);
@@ -223,16 +229,117 @@ export function drawCard(ctx: Ctx, a: DrawArgs) {
   ctx.restore();
 }
 
-/** Render the whole card to a canvas at the given pixel scale (1 = 1024 x 1536). A newer call cancels an older one still loading. */
+/** Render the selected design to a canvas at the given pixel scale (1 = native size of that design). A newer call cancels an older one still loading. */
 export async function renderToCanvas(canvas: HTMLCanvasElement, args: Omit<DrawArgs, "images"> & { images?: CardImages }, scale = 1) {
   const cv = canvas as HTMLCanvasElement & { __seq?: number };
   const seq = (cv.__seq = (cv.__seq || 0) + 1);
-  const images = args.images || (await loadCardImages(args.c.portraitUrl));
+  const design: Design = args.design === 2 ? 2 : 1;
+  const images = args.images || (await loadCardImages(args.c.portraitUrl, design));
   await loadFonts();
   if (cv.__seq !== seq) return;
-  cv.width = Math.round(W * scale); cv.height = Math.round(H * scale);
+  const { w, h } = DESIGNS[design];
+  cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
   const ctx = cv.getContext("2d")!;
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   ctx.imageSmoothingQuality = "high";
-  drawCard(ctx, { ...args, images });
+  drawCard(ctx, { ...args, design, images });
+}
+
+/* ================= CARD 2 (landscape, 1536 x 1024) ================= */
+
+/** Left-aligned paragraph with first-line indent; wraps by real width. Returns the lines used. */
+function paraLines(ctx: Ctx, text: string, w: number, indent: number): string[] {
+  const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const out: string[] = []; let cur = "", first = true;
+  for (const wd of words) {
+    const t = cur ? cur + " " + wd : wd;
+    const max = first ? w - indent : w;
+    if (cur && lineW(ctx, t) > max) { out.push(cur); cur = wd; first = false; } else cur = t;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+const dot = (d: string) => String(d ?? "").replace(/\//g, ".");
+
+function drawCard2(ctx: Ctx, a: DrawArgs) {
+  const { c, images } = a;
+  ctx.save();
+  ctx.fillStyle = WHITE; ctx.fillRect(0, 0, 1536, 1024);
+  ctx.drawImage(images.plate, 0, 0, 1536, 1024);
+
+  // portrait in the rounded frame (x 48..358, y 92..498)
+  if (images.portrait) {
+    const px = 48, py = 92, pw = 310, ph = 409;
+    ctx.save();
+    ctx.beginPath(); (ctx as any).roundRect ? (ctx as any).roundRect(px, py, pw, ph, 14) : ctx.rect(px, py, pw, ph); ctx.clip();
+    const im = images.portrait, s = Math.max(pw / im.width, ph / im.height);
+    const dw = im.width * s, dh = im.height * s;
+    ctx.drawImage(im, px + (pw - dw) / 2, py + Math.min(0, (ph - dh) * 0.25), dw, dh);
+    ctx.restore();
+  }
+
+  const B = 700;
+  // header
+  box(ctx, norm(c.title), { x: 560, y: 36, w: 415, h: 84, size: 84, min: 36, weight: 800, fam: "sans", color: WHITE, lh: 1.15 });
+  box(ctx, norm(c.shloka), { x: 1124, y: 36, w: 352, h: 74, size: 24, min: 12, weight: B, fam: "sans", lh: 1.45 });
+
+  // greeting + recipient row
+  setFont(ctx, B, 38, "sans"); ctx.fillStyle = INK; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  ctx.fillText(norm(c.salutation2) || "सेवा में,", 392, 160);
+  {
+    const title = a.recipientTitle, name = a.recipient.trim();
+    setFont(ctx, B, 36, "sans");
+    const x0 = 455; ctx.fillText(title, x0, 207);
+    let x = x0 + lineW(ctx, title) + 12;
+    if (name) {
+      let s = 36; setFont(ctx, B, s, "sans");
+      while (s > 18 && lineW(ctx, name) > 1480 - x - 30) { s -= 0.5; setFont(ctx, B, s, "sans"); }
+      ctx.fillText(name, x, 207); x += lineW(ctx, name) + 10;
+    }
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.setLineDash([0.1, 7]);
+    ctx.beginPath(); ctx.moveTo(x, 217); ctx.lineTo(1485, 217); ctx.stroke(); ctx.restore();
+  }
+
+  // the two paragraphs (shared font size, auto-fit so they never collide with the table)
+  {
+    const one = (t: string) => norm(t).replace(/\s*\n\s*/g, " ");
+    const p1 = `${one(c.intro)} ${norm(c.deceasedName)} ${one(c.afterDeath)} ${dot(norm(c.deathDate))} (${norm(c.deathDay)}) को हो गया है।`;
+    const p2 = one(c.invitation);
+    const X = 392, Wd = 1098, ZY = 232, ZH = 176, IND = 52;
+    let size = 38, l1: string[] = [], l2: string[] = [];
+    for (; size >= 20; size -= 0.5) {
+      setFont(ctx, B, size, "sans");
+      l1 = paraLines(ctx, p1, Wd, IND); l2 = paraLines(ctx, p2, Wd, IND);
+      if ((l1.length + l2.length) * size * 1.2 + size * 0.2 <= ZH) break;
+    }
+    setFont(ctx, B, size, "sans"); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    const lh = size * 1.2, total = (l1.length + l2.length) * lh + size * 0.2;
+    let y = ZY + (ZH - total) / 2 + lh / 2;
+    [l1, l2].forEach((ls, bi) => { ls.forEach((l, i) => { ctx.fillText(l, X + (i === 0 ? IND : 0), y); y += lh; }); if (bi === 0) y += size * 0.2; });
+  }
+
+  // schedule
+  box(ctx, norm(c.scheduleTitle), { x: 740, y: 418, w: 256, h: 44, size: 40, min: 18, weight: B, fam: "sans", color: WHITE, lh: 1.15 });
+  const RY = [487, 529, 571, 613];
+  (c.events || []).slice(0, 4).forEach((ev, i) => {
+    const y = RY[i], h = 40;
+    box(ctx, "दिनांक :-", { x: 408, y: y - h / 2, w: 135, h, size: 35, min: 20, weight: B, fam: "sans", align: "left", lh: 1.1 });
+    box(ctx, dot(ev.date), { x: 548, y: y - h / 2, w: 200, h, size: 35, min: 20, weight: B, fam: "sans", align: "left", lh: 1.1 });
+    box(ctx, `(${ev.day})`, { x: 757, y: y - h / 2, w: 175, h, size: 35, min: 18, weight: B, fam: "sans", align: "left", lh: 1.1 });
+    box(ctx, "—", { x: 950, y: y - h / 2, w: 40, h, size: 35, min: 20, weight: B, fam: "sans", align: "left", lh: 1.1 });
+    box(ctx, norm(ev.title), { x: 1028, y: y - h / 2, w: 462, h, size: 35, min: 14, weight: B, fam: "sans", align: "left", lh: 1.1 });
+  });
+
+  // family
+  box(ctx, `-: ${norm(c.familyTitle)} :-`, { x: 330, y: 665, w: 356, h: 42, size: 37, min: 18, weight: B, fam: "sans", color: WHITE, lh: 1.15 });
+  box(ctx, (c.familyLines || []).join(" "), { x: 92, y: 722, w: 836, h: 186, size: 40, min: 16, weight: B, fam: "sans", lh: 1.28, wrapLines: true });
+
+  // regards
+  box(ctx, `${norm(c.regardsTitle)} :-`, { x: 1178, y: 665, w: 132, h: 42, size: 33, min: 16, weight: B, fam: "sans", color: WHITE, lh: 1.15 });
+  box(ctx, norm(c.representative).replace(/^श्री\s+/, ""), { x: 1060, y: 724, w: 374, h: 84, size: 76, min: 28, weight: 800, fam: "sans", lh: 1.1 });
+  box(ctx, norm(c.address), { x: 1012, y: 812, w: 446, h: 90, size: 35, min: 16, weight: B, fam: "sans", lh: 1.4, wrapLines: true });
+  box(ctx, `मोबाइल - ${norm(c.phones)}`, { x: 990, y: 912, w: 430, h: 44, size: 37, min: 16, weight: B, fam: "sans", color: WHITE, lh: 1.1 });
+
+  ctx.restore();
 }

@@ -4,6 +4,8 @@ import "@fontsource/noto-serif-devanagari/700.css";
 import "@fontsource/noto-serif-devanagari/800.css";
 import "@fontsource/noto-sans-devanagari/400.css";
 import "@fontsource/noto-sans-devanagari/500.css";
+import "@fontsource/noto-sans-devanagari/700.css";
+import "@fontsource/noto-sans-devanagari/800.css";
 import "@fontsource/mukta/600.css";
 import "./globals.css";
 export const metadata: Metadata = {

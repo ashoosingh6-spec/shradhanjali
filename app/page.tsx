@@ -6,7 +6,7 @@ import "./public.css";
 
 import { MemorialCard } from "@/components/MemorialCard";
 import type { CardContent } from "@/lib/card-types";
-import { renderToCanvas } from "@/lib/render-card";
+import { renderToCanvas, DESIGNS, type Design } from "@/lib/render-card";
 
 type Fmt = "pdf" | "jpg";
 const EXPORT_SCALE = 1.5; // 1536 x 2304 px: sharp text, small file
@@ -17,6 +17,7 @@ export default function Home() {
  const [recipient,setRecipient]=useState("");
  const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
  const [format,setFormat]=useState<Fmt>("pdf");
+ const [design,setDesign]=useState<Design>(1);
  const [status,setStatus]=useState("");
  const [busy,setBusy]=useState(false);
  const [ready,setReady]=useState(false);
@@ -31,31 +32,31 @@ export default function Home() {
    if(data?.custom_css) setCustomCss(data.custom_css);
  })(); },[]);
 
- const keyOf=useCallback(()=>JSON.stringify([content,recipient.trim(),recipientTitle,format]),[content,recipient,recipientTitle,format]);
+ const keyOf=useCallback(()=>JSON.stringify([content,recipient.trim(),recipientTitle,format,design]),[content,recipient,recipientTitle,format,design]);
 
  const build=useCallback(async(key:string):Promise<File>=>{
   if(prepared.current?.key===key) return prepared.current.file;
   if(pending.current?.key===key) return pending.current.p;
   const p=(async()=>{
    const cv=document.createElement("canvas");
-   await renderToCanvas(cv,{c:content,recipient,recipientTitle},EXPORT_SCALE);
+   await renderToCanvas(cv,{c:content,recipient,recipientTitle,design},EXPORT_SCALE);
    const jpg:string=cv.toDataURL("image/jpeg",0.9);
    let file:File;
    if(format==="jpg"){
     const blob=await new Promise<Blob>((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error("toBlob failed")),"image/jpeg",0.9));
-    file=new File([blob],"shradhanjali-card.jpg",{type:"image/jpeg"});
+    file=new File([blob],`shradhanjali-card-${design}.jpg`,{type:"image/jpeg"});
    } else {
     const {jsPDF}=await import("jspdf"); // loaded only when needed
-    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:[210,315],compress:true});
-    pdf.addImage(jpg,"JPEG",0,0,210,315,undefined,"FAST");
-    file=new File([pdf.output("blob")],"shradhanjali-card.pdf",{type:"application/pdf"});
+    const pdf=new jsPDF({orientation:design===2?"landscape":"portrait",unit:"mm",format:design===2?[315,210]:[210,315],compress:true});
+    pdf.addImage(jpg,"JPEG",0,0,design===2?315:210,design===2?210:315,undefined,"FAST");
+    file=new File([pdf.output("blob")],`shradhanjali-card-${design}.pdf`,{type:"application/pdf"});
    }
    prepared.current={key,file};
    return file;
   })();
   pending.current={key,p};
   try{return await p;}finally{if(pending.current?.p===p)pending.current=null;}
- },[content,recipient,recipientTitle,format]);
+ },[content,recipient,recipientTitle,format,design]);
 
  // prepare quietly ~0.6s after the visitor stops typing
  useEffect(()=>{
@@ -107,6 +108,9 @@ export default function Home() {
     <label htmlFor="recipient-name">नाम लिखें</label><input id="recipient-name" value={recipient} onChange={e=>setRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" maxLength={32}/>
     <small>चुना हुआ संबोधन और नाम कार्ड में डॉटेड लाइन पर दिखाई देगा।</small>
     <small className="template-note">मूल डिजाइन, सजावट, चित्र और हिंदी फॉन्ट आपके दिए हुए पोस्टर से ज्यों-के-त्यों लिए गए हैं।</small>
+    <label>कार्ड का डिज़ाइन चुनें</label><div className="format-switch design-switch">
+      {([1,2] as Design[]).map(d=><button key={d} className={design===d?"selected":""} onClick={()=>setDesign(d)}>{DESIGNS[d].name}</button>)}
+    </div>
     <label>फाइल का प्रकार</label><div className="format-switch">
       <button className={format==="pdf"?"selected":""} onClick={()=>setFormat("pdf")}>PDF</button>
       <button className={format==="jpg"?"selected":""} onClick={()=>setFormat("jpg")}>Image (JPG)</button>
@@ -116,7 +120,7 @@ export default function Home() {
     {status&&<p className="public-status" role="status">{status}</p>}
     <p className="privacy-hint">मूल पोस्टर का डिजाइन और फोटो बदले बिना रखा गया है।</p>
    </aside>
-   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle}/></div></div></section>
+   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle} design={design}/></div></div></section>
   </section>
  </main>
 }

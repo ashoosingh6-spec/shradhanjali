@@ -5,6 +5,7 @@ import { defaultContent } from "@/lib/default-content";
 import "./admin.css";
 import "../public.css";
 import { MemorialCard } from "@/components/MemorialCard";
+import { DESIGNS, type Design } from "@/lib/render-card";
 
 type Event={date:string;day:string;title:string};
 type Content=typeof defaultContent;
@@ -17,6 +18,7 @@ export default function AdminPage(){
  const [css,setCss]=useState("");
  const [previewRecipient,setPreviewRecipient]=useState("");
  const [previewRecipientTitle,setPreviewRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
+ const [previewDesign,setPreviewDesign]=useState<Design>(1);
  const [mode,setMode]=useState<"fields"|"json"|"css">("fields");
  const [status,setStatus]=useState("");
  const [busy,setBusy]=useState(false);
@@ -55,7 +57,7 @@ export default function AdminPage(){
     <div className="editor-tabs"><button className={mode==="fields"?"on":""} onClick={()=>setMode("fields")}>Wording Fields</button><button className={mode==="json"?"on":""} onClick={()=>setMode("json")}>JSON / Source</button><button className={mode==="css"?"on":""} onClick={()=>setMode("css")}>Custom CSS</button></div>
     {mode==="fields"&&<div className="fields">
       <p className="editor-note">यहाँ बदलाव करें। फिर Save Changes दबाएँ। Recipient का नाम visitor हर बार खुद भरेगा।</p>
-      {(["omText","title","shloka","salutation","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
+      {(["omText","title","shloka","salutation","salutation2","intro","deceasedName","deathDate","deathDay","afterDeath","invitation","scheduleTitle","familyTitle","regardsTitle","representative","address","phones"] as string[]).map(key=><label key={key}>{key}<textarea rows={key==="shloka"||key==="invitation"||key==="intro"?3:1} value={content[key]??""} onChange={e=>update(key,e.target.value)}/></label>)}
       <div className="photo-editor"><b>दिवंगत की फोटो</b>
        <div className="photo-row"><div className="photo-thumb"><img src={content.portraitUrl||"/default-portrait.jpg"} alt="portrait"/></div>
        <div><input type="file" accept="image/*" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadPhoto(f);e.target.value="";}}/>
@@ -74,8 +76,9 @@ export default function AdminPage(){
       <label className="recipient-check"><input type="checkbox" checked={previewRecipientTitle==="श्रीमान"} onChange={()=>setPreviewRecipientTitle("श्रीमान")}/> <span>श्रीमान</span></label>
       <label className="recipient-check"><input type="checkbox" checked={previewRecipientTitle==="श्रीमती"} onChange={()=>setPreviewRecipientTitle("श्रीमती")}/> <span>श्रीमती</span></label>
     </div>
+    <div className="format-switch design-switch">{([1,2] as Design[]).map(d=><button type="button" key={d} className={previewDesign===d?"selected":""} onClick={()=>setPreviewDesign(d)}>{DESIGNS[d].name}</button>)}</div>
     <label htmlFor="admin-preview-recipient">नाम</label><input id="admin-preview-recipient" value={previewRecipient} onChange={e=>setPreviewRecipient(e.target.value)} placeholder="यहाँ नाम लिखें" />
-   </div><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} recipientTitle={previewRecipientTitle}/></div></div></section>
+   </div><div className="mini-preview"><style>{css}</style><div className="admin-card-stage"><MemorialCard c={content} recipient={previewRecipient} recipientTitle={previewRecipientTitle} design={previewDesign}/></div></div></section>
   </section>
  </main>;
 }
