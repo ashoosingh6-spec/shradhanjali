@@ -15,7 +15,7 @@ export default function Home() {
  const [content,setContent]=useState<CardContent>(defaultContent as CardContent);
  const [customCss,setCustomCss]=useState("");
  const [recipient,setRecipient]=useState("");
- const [recipientTitle,setRecipientTitle]=useState<"श्रीमान"|"श्रीमती">("श्रीमान");
+ const [recipientTitle,setRecipientTitle]=useState<"श्रीमान्"|"श्रीमती">("श्रीमान्");
  const [format,setFormat]=useState<Fmt>("pdf");
  const [design,setDesign]=useState<Design>(1);
  const [status,setStatus]=useState("");
