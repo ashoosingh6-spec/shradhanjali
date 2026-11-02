@@ -39,7 +39,8 @@ export default function Home() {
   if(pending.current?.key===key) return pending.current.p;
   const p=(async()=>{
    const cv=document.createElement("canvas");
-   await renderToCanvas(cv,{c:content,recipient,recipientTitle,design},EXPORT_SCALE);
+   // cast needed only until render-card's type is updated to "श्रीमान्"
+   await renderToCanvas(cv,{c:content,recipient,recipientTitle: recipientTitle as any,design},EXPORT_SCALE);
    const jpg:string=cv.toDataURL("image/jpeg",0.9);
    let file:File;
    if(format==="jpg"){
@@ -120,7 +121,7 @@ export default function Home() {
     {status&&<p className="public-status" role="status">{status}</p>}
     <p className="privacy-hint">मूल पोस्टर का डिजाइन और फोटो बदले बिना रखा गया है।</p>
    </aside>
-   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle} design={design}/></div></div></section>
+   <section className="preview-wrap"><style>{customCss}</style><div className="preview-label"><b>कार्ड का Preview</b><span>{ready?"✓ फाइल तैयार":"फाइल बन रही है…"}</span></div><div className="preview-scroll"><div><MemorialCard c={c} recipient={recipient} recipientTitle={recipientTitle as any} design={design}/></div></div></section>
   </section>
  </main>
 }
