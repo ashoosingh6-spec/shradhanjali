@@ -306,14 +306,16 @@ function drawCard2(ctx: Ctx, a: DrawArgs) {
     const title = a.recipientTitle, name = a.recipient.trim();
     setFont(ctx, B, 38, "sans"); ctx.fillStyle = INK; ctx.textBaseline = "middle"; ctx.textAlign = "left";
     const x0 = 392, ry = 168; ctx.fillText(title, x0, ry);
-    let x = x0 + lineW(ctx, title) + 14;
+    const x = x0 + lineW(ctx, title) + 14;
+    // dotted line runs under the name as well (the typed name sits on the dots)
+    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.setLineDash([0.1, 7]);
+    ctx.beginPath(); ctx.moveTo(x, ry + 18); ctx.lineTo(1485, ry + 18); ctx.stroke(); ctx.restore();
     if (name) {
       let s = 38; setFont(ctx, B, s, "sans");
       while (s > 18 && lineW(ctx, name) > 1480 - x - 30) { s -= 0.5; setFont(ctx, B, s, "sans"); }
-      ctx.fillText(name, x, ry); x += lineW(ctx, name) + 10;
+      ctx.fillStyle = INK; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillText(name, x, ry - 2);
     }
-    ctx.save(); ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.setLineDash([0.1, 7]);
-    ctx.beginPath(); ctx.moveTo(x, ry + 10); ctx.lineTo(1485, ry + 10); ctx.stroke(); ctx.restore();
   }
 
   // the two paragraphs (shared font size, auto-fit so they never collide with the table)
