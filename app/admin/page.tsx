@@ -33,7 +33,7 @@ export default function AdminPage(){
   if(!file.type.startsWith("image/")){setStatus("कृपया केवल image file चुनें।");return;}
   setBusy(true);setStatus("फोटो तैयार हो रही है...");
   try{
-   const bmp=await createImageBitmap(file);
+   const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
    const max=1000,sc=Math.min(1,max/Math.max(bmp.width,bmp.height));
    const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);
    cv.getContext("2d")!.drawImage(bmp,0,0,cv.width,cv.height);
@@ -62,6 +62,13 @@ export default function AdminPage(){
        <div className="photo-row"><div className="photo-thumb"><img src={content.portraitUrl||"/default-portrait.jpg"} alt="portrait"/></div>
        <div><input type="file" accept="image/*" disabled={busy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadPhoto(f);e.target.value="";}}/>
        {content.portraitUrl&&<button type="button" className="add-event" onClick={()=>update("portraitUrl","")}>मूल फोटो वापस लगाएँ</button>}</div></div>
+       <div className="photo-adjust">
+        <label>ज़ूम: {Number(content.portraitZoom||1).toFixed(2)}×<input type="range" min="1" max="2.5" step="0.05" value={content.portraitZoom??1} onChange={e=>update("portraitZoom",Number(e.target.value))}/></label>
+        <label>दाएँ–बाएँ: {content.portraitX??0}<input type="range" min="-50" max="50" step="1" value={content.portraitX??0} onChange={e=>update("portraitX",Number(e.target.value))}/></label>
+        <label>ऊपर–नीचे: {content.portraitY??0}<input type="range" min="-50" max="50" step="1" value={content.portraitY??0} onChange={e=>update("portraitY",Number(e.target.value))}/></label>
+        <button type="button" className="add-event" onClick={()=>{update("portraitZoom",1);update("portraitX",0);update("portraitY",0);}}>फोटो की position reset करें</button>
+        <small>Preview में चेहरा frame के बीच लाएँ, फिर Save Changes दबाएँ। दोनों कार्ड में यही position लगेगी।</small>
+       </div>
        <small>फोटो चुनते ही upload होकर preview में दिखेगी। उसके बाद Save Changes दबाएँ।</small></div>
       <label>Family names (one per line)<textarea rows={5} value={(content.familyLines||[]).join("\n")} onChange={e=>update("familyLines",e.target.value.split("\n"))}/></label>
       <div className="event-editor"><h3>श्राद्ध कार्यक्रम</h3>{(content.events||[]).map((ev:Event,i:number)=><div className="event-fields" key={i}><input aria-label="Date" value={ev.date} placeholder="Date" onChange={e=>{const a=[...content.events];a[i]={...a[i],date:e.target.value};update("events",a)}}/><input aria-label="Day" value={ev.day} placeholder="Day" onChange={e=>{const a=[...content.events];a[i]={...a[i],day:e.target.value};update("events",a)}}/><input aria-label="Event" value={ev.title} placeholder="Event" onChange={e=>{const a=[...content.events];a[i]={...a[i],title:e.target.value};update("events",a)}}/><button onClick={()=>update("events",content.events.filter((_:Event,j:number)=>j!==i))}>×</button></div>)}<button className="add-event" onClick={()=>update("events",[...(content.events||[]),{date:"",day:"",title:""}])}>+ Add Event</button></div>

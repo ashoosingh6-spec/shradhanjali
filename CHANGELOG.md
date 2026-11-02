@@ -31,3 +31,7 @@
 
 ## 3.3.1
 - Portrait now fills the whole frame in both designs. Card 1: the photo covers the full oval opening (the plate's sample man is no longer visible) and the lilies / diya flame are painted back in front. Card 2: photo fills the frame edge to edge (no white gaps), roses stay in front. Plate 2 / default-portrait-2 regenerated.
+
+## 3.4.0
+- **Photo placement rebuilt.** Each design now has an exact photo mask (public/portrait-mask-1.png, portrait-mask-2.png): the photo is cut to the frame opening and sits *behind* the lilies / roses / diya flame, with no gaps or straight edges. Plates were cleaned of the sample photo (plate.jpg, plate-2.jpg).
+- **Admin: photo zoom + position sliders** (portraitZoom / portraitX / portraitY). Preview updates live; the same placement is used by both cards. EXIF rotation of uploaded photos is respected.

@@ -9,9 +9,11 @@ import type { CardContent } from "@/lib/card-types";
  * - No DOM-to-image conversion, no CSS container units: works on old Android / iOS Safari.
  */
 export type Design = 1 | 2;
-export const DESIGNS: Record<Design, { w: number; h: number; plate: string; portrait: string; name: string }> = {
-  1: { w: 1024, h: 1536, plate: "/shradhanjali-plate.jpg", portrait: "/default-portrait.jpg", name: "कार्ड 1 · खड़ा (Portrait)" },
-  2: { w: 1536, h: 1024, plate: "/shradhanjali-plate-2.jpg", portrait: "/default-portrait-2.jpg", name: "कार्ड 2 · आड़ा (Landscape)" },
+/** mask = the exact visible shape of the photo (frame opening minus the flowers that sit in front of it). x/y/w/h = where the mask PNG sits on the card. */
+type PhotoMask = { src: string; x: number; y: number; w: number; h: number; fy: number };
+export const DESIGNS: Record<Design, { w: number; h: number; plate: string; portrait: string; name: string; mask: PhotoMask }> = {
+  1: { w: 1024, h: 1536, plate: "/shradhanjali-plate.jpg", portrait: "/default-portrait.jpg", name: "कार्ड 1 · खड़ा (Portrait)", mask: { src: "/portrait-mask-1.png", x: 74, y: 368, w: 319, h: 401, fy: 0.1 } },
+  2: { w: 1536, h: 1024, plate: "/shradhanjali-plate-2.jpg", portrait: "/default-portrait-2.jpg", name: "कार्ड 2 · आड़ा (Landscape)", mask: { src: "/portrait-mask-2.png", x: 44, y: 85, w: 316, h: 442, fy: 0.1 } },
 };
 export const W = 1024;
 export const H = 1536;
@@ -25,7 +27,7 @@ const FAM: Record<Fam, string> = { serif: SERIF, sans: SANS, mukta: MUKTA };
 const INK = "#0a0a0a";
 const WHITE = "#ffffff";
 
-export type CardImages = { plate: HTMLImageElement; portrait: HTMLImageElement | null };
+export type CardImages = { plate: HTMLImageElement; portrait: HTMLImageElement | null; mask: HTMLImageElement | null };
 
 /* ---------- asset loading (cached) ---------- */
 const imgCache = new Map<string, Promise<HTMLImageElement>>();
@@ -50,7 +52,8 @@ export async function loadCardImages(portraitUrl?: string, design: Design = 1): 
   const plate = loadImage(DESIGNS[design].plate);
   const fallback = () => loadImage(DESIGNS[design].portrait);
   const portrait = (portraitUrl ? loadImage(portraitUrl, true).catch(fallback) : fallback()).catch(() => null);
-  return { plate: await plate, portrait: await portrait };
+  const mask = loadImage(DESIGNS[design].mask.src).catch(() => null);
+  return { plate: await plate, portrait: await portrait, mask: await mask };
 }
 
 const FONT_SPECS: [string, string][] = [
@@ -144,12 +147,36 @@ function stack(ctx: Ctx, paras: string[], z: { x: number; y: number; w: number; 
   });
 }
 
-/* parts of the plate that must stay IN FRONT of the portrait (lilies, leaves, diya flame) */
-const FOREGROUND_1: [number, number][][] = [
-  [[80,646],[104,648],[118,664],[120,684],[142,688],[150,700],[165,704],[170,712],[180,712],[192,725],[196,745],[190,764],[70,764],[70,646]],
-  [[395,640],[372,646],[358,664],[352,678],[342,684],[330,700],[318,704],[308,716],[296,728],[270,732],[268,748],[270,764],[400,764],[400,640]],
-  [[221,748],[233,716],[245,748]],
-];
+/** Place a photo inside a frame: "cover" fit x zoom, moved by the admin's X / Y sliders (percent of the frame), never leaving gaps. */
+function placePortrait(ctx: Ctx, im: HTMLImageElement, bx: number, by: number, bw: number, bh: number, c: CardContent, biasY: number) {
+  const k = Math.min(3, Math.max(1, Number((c as any).portraitZoom) || 1));
+  const px = Math.min(60, Math.max(-60, Number((c as any).portraitX) || 0));
+  const py = Math.min(60, Math.max(-60, Number((c as any).portraitY) || 0));
+  const s = Math.max(bw / im.width, bh / im.height) * k;
+  const dw = im.width * s, dh = im.height * s;
+  let x = bx + (bw - dw) / 2 + (px / 100) * bw;
+  let y = by + (bh - dh) * biasY + (py / 100) * bh;
+  x = Math.min(bx, Math.max(bx + bw - dw, x));
+  y = Math.min(by, Math.max(by + bh - dh, y));
+  ctx.drawImage(im, x, y, dw, dh);
+}
+
+/** Draw the photo, shaped by the design's mask so it sits exactly inside the frame and behind the flowers. */
+function drawPortrait(ctx: Ctx, a: DrawArgs, design: Design) {
+  const { images, c } = a, M = DESIGNS[design].mask;
+  if (!images.portrait) return;
+  const sc = Math.max(1, ctx.getTransform().a);
+  const off = document.createElement("canvas");
+  off.width = Math.ceil(M.w * sc); off.height = Math.ceil(M.h * sc);
+  const o = off.getContext("2d")!;
+  o.scale(sc, sc); o.imageSmoothingQuality = "high";
+  o.fillStyle = "#e6e6e6"; o.fillRect(0, 0, M.w, M.h);
+  o.translate(-M.x, -M.y);
+  placePortrait(o, images.portrait, M.x, M.y, M.w, M.h, c, M.fy);
+  o.setTransform(1, 0, 0, 1, 0, 0);
+  if (images.mask) { o.globalCompositeOperation = "destination-in"; o.drawImage(images.mask, 0, 0, off.width, off.height); }
+  ctx.drawImage(off, M.x, M.y, M.w, M.h);
+}
 
 /* ---------- main draw ---------- */
 export type DrawArgs = {
@@ -163,25 +190,7 @@ export function drawCard(ctx: Ctx, a: DrawArgs) {
   ctx.fillStyle = WHITE; ctx.fillRect(0, 0, W, H);
   ctx.drawImage(images.plate, 0, 0, W, H);
 
-  // portrait: fills the WHOLE oval opening of the frame (hides the artwork's sample photo),
-  // then the lilies / flame of the plate are painted back on top.
-  if (images.portrait) {
-    const im = images.portrait, bx = 76, by = 368, bw = 316, bh = 376;
-    ctx.save();
-    ctx.beginPath(); ctx.ellipse(234, 556, 158, 188, 0, 0, Math.PI * 2); ctx.clip();
-    ctx.fillStyle = "#2a2a2a"; ctx.fillRect(bx, by, bw, bh);
-    const s = Math.max(bw / im.width, bh / im.height);
-    const dw = im.width * s, dh = im.height * s;
-    ctx.drawImage(im, bx + (bw - dw) / 2, by + (bh - dh) * 0.1, dw, dh);
-    ctx.restore();
-    for (const poly of FOREGROUND_1) {
-      ctx.save(); ctx.beginPath();
-      poly.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      ctx.closePath(); ctx.clip();
-      ctx.drawImage(images.plate, 0, 0, W, H);
-      ctx.restore();
-    }
-  }
+  drawPortrait(ctx, a, 1);
 
   // ---- header
   box(ctx, norm(c.omText), { x: 400, y: 100, w: 225, h: 46, size: 36, weight: 500, fam: "sans" });
@@ -285,17 +294,7 @@ function drawCard2(ctx: Ctx, a: DrawArgs) {
   ctx.fillStyle = WHITE; ctx.fillRect(0, 0, 1536, 1024);
   ctx.drawImage(images.plate, 0, 0, 1536, 1024);
 
-  // portrait fills the whole frame opening (x 46..357, y 87..491); roses sit in front of it
-  if (images.portrait) {
-    const px = 46, py = 87, pw = 311.5, ph = 404;
-    ctx.save();
-    ctx.beginPath(); ctx.rect(px, py, pw, ph); ctx.clip();
-    ctx.fillStyle = "#e9e9e9"; ctx.fillRect(px, py, pw, ph);
-    const im = images.portrait, s = Math.max(pw / im.width, ph / im.height);
-    const dw = im.width * s, dh = im.height * s;
-    ctx.drawImage(im, px + (pw - dw) / 2, py + (ph - dh) * 0.12, dw, dh);
-    ctx.restore();
-  }
+  drawPortrait(ctx, a, 2);
 
   const B = 700;
   // header

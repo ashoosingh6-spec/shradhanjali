@@ -46,5 +46,8 @@ export const defaultContent = {
   "address": "ग्राम : पथरोरा, वजीरगंज (गया जी)",
   "phones": "9939341216, 9708084906",
   "footer": "॥ दिवंगत आत्मा को विनम्र श्रद्धांजलि ॥",
-  "portraitUrl": ""
+  "portraitUrl": "",
+  "portraitZoom": 1,
+  "portraitX": 0,
+  "portraitY": 0
 } as const;
