@@ -78,7 +78,7 @@ export default function Home() {
  }
  async function share() {
   const nav=navigator as Navigator&{canShare?:(d:ShareData)=>boolean};
-  const text=`${recipient.trim()?recipientTitle+" "+recipient.trim()+" जी, ":""}सादर आमंत्रण। कृपया शोक-संदेश एवं श्राद्ध-कार्यक्रम में उपस्थित होकर हमें कृतार्थ करें।`;
+  const text="🙏🙏🙏🙏🙏";
   try{
    setBusy(true);const key=keyOf();
    // prepared file => share() is called immediately, while the tap is still "fresh" (needed by iOS / Chrome)
